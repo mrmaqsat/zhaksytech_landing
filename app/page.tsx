@@ -422,40 +422,40 @@ export default function ZhaksytechLanding() {
                 description: "Фирменный стиль и логотипы, которые выделяют среди конкурентов",
                 icon: "🎨",
                 gradient: "from-amber-500 to-amber-600",
-                delay: "100ms",
+                delay: "200ms", // increased delay from 100ms to 200ms
               },
               {
                 title: "SEO-оптимизация",
                 description: "Выводим в топ поисковых систем для органического трафика",
                 icon: "📈",
                 gradient: "from-green-500 to-emerald-500",
-                delay: "200ms",
+                delay: "400ms", // increased delay from 200ms to 400ms
               },
               {
                 title: "Контекстная реклама",
                 description: "Эффективные кампании в Яндекс.Директ и Google Ads",
                 icon: "🎯",
                 gradient: "from-orange-500 to-red-500",
-                delay: "300ms",
+                delay: "600ms", // increased delay from 300ms to 600ms
               },
               {
                 title: "SMM и Таргет",
                 description: "Управление соцсетями и таргетированная реклама",
                 icon: "📱",
                 gradient: "from-cyan-500 to-blue-500",
-                delay: "400ms",
+                delay: "800ms", // increased delay from 400ms to 800ms
               },
               {
                 title: "Автоматизация",
                 description: "Telegram-боты и CRM-системы для оптимизации процессов",
                 icon: "🤖",
                 gradient: "from-cyan-600 to-amber-500",
-                delay: "500ms",
+                delay: "1000ms", // increased delay from 500ms to 1000ms
               },
             ].map((service, index) => (
               <Card
                 key={index}
-                className={`group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:scale-105 hover:-translate-y-2 ${
+                className={`group hover:shadow-2xl transition-all duration-700 border-0 bg-white/80 backdrop-blur-sm transform hover:scale-105 hover:-translate-y-2 ${
                   isVisible.services ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
                 }`}
                 style={{ transitionDelay: service.delay }}
@@ -781,7 +781,7 @@ export default function ZhaksytechLanding() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-amber-500 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-2xl font-serif font-black">Zhaksytech</span>
