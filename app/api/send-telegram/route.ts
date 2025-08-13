@@ -7,16 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     const { name, phone, email, message } = await request.json()
 
-    // Format the message for Telegram
     const telegramMessage = `
-🔥 *Новая заявка с сайта Zhaksytech!*
+🔥 Новая заявка с сайта Zhaksytech!
 
-👤 *Имя:* ${name}
-📞 *Телефон:* ${phone}
-📧 *Email:* ${email}
-💬 *Сообщение:* ${message}
+👤 Имя: ${name}
+📞 Телефон: ${phone}
+📧 Email: ${email}
+💬 Сообщение: ${message}
 
-⏰ *Время:* ${new Date().toLocaleString("ru-RU", { timeZone: "Asia/Almaty" })}
+⏰ Время: ${new Date().toLocaleString("ru-RU", { timeZone: "Asia/Almaty" })}
     `.trim()
 
     // Send message to Telegram
@@ -28,17 +27,28 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
         text: telegramMessage,
-        parse_mode: "Markdown",
       }),
     })
 
     if (!telegramResponse.ok) {
-      throw new Error("Failed to send Telegram message")
+      const errorData = await telegramResponse.text()
+      console.error("Telegram API error:", errorData)
+      throw new Error(`Telegram API error: ${telegramResponse.status} - ${errorData}`)
     }
+
+    const result = await telegramResponse.json()
+    console.log("Telegram message sent successfully:", result)
 
     return NextResponse.json({ success: true, message: "Заявка успешно отправлена!" })
   } catch (error) {
     console.error("Error sending to Telegram:", error)
-    return NextResponse.json({ success: false, message: "Ошибка при отправке заявки" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Ошибка при отправке заявки",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
