@@ -2,15 +2,12 @@
 
 import type React from "react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Phone, MessageCircle, Mail, CheckCircle, Users, ArrowRight, Sparkles, Star, Award, Rocket } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 
-export default function ZhaksytechLanding() {
-  const [scrollY, setScrollY] = useState(0)
-  const [isVisible, setIsVisible] = useState<{ [key: string]: boolean }>({})
+export default function Home() {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [expandedService, setExpandedService] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -18,54 +15,56 @@ export default function ZhaksytechLanding() {
     message: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitMessage, setSubmitMessage] = useState("")
-
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   const [isLoaded, setIsLoaded] = useState(false)
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    const savedTheme = localStorage.getItem("theme")
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 2 - 1,
-        y: (e.clientY / window.innerHeight) * 2 - 1,
-      })
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+      setIsDarkMode(true)
+      document.documentElement.classList.add("dark")
     }
 
-    window.addEventListener("mousemove", handleMouseMove)
-    setIsLoaded(true)
+    setTimeout(() => setIsLoaded(true), 100)
 
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
-
-  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          setIsVisible((prev) => ({
-            ...prev,
-            [entry.target.id]: entry.isIntersecting,
-          }))
+          if (entry.isIntersecting) {
+            setVisibleSections((prev) => new Set(prev).add(entry.target.id))
+          }
         })
       },
       { threshold: 0.1 },
     )
 
-    const elements = document.querySelectorAll("[data-animate]")
-    elements.forEach((el) => observer.observe(el))
+    const sections = document.querySelectorAll("[id]")
+    sections.forEach((section) => observer.observe(section))
 
     return () => observer.disconnect()
   }, [])
 
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode
+    setIsDarkMode(newTheme)
+    localStorage.setItem("theme", newTheme ? "dark" : "light")
+    document.documentElement.classList.toggle("dark", newTheme)
+  }
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+    setIsMenuOpen(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setSubmitMessage("")
 
     try {
       const response = await fetch("/api/send-telegram", {
@@ -76,313 +75,284 @@ export default function ZhaksytechLanding() {
         body: JSON.stringify(formData),
       })
 
-      const result = await response.json()
-
-      if (result.success) {
-        setSubmitMessage("✅ Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.")
+      if (response.ok) {
+        setSubmitStatus("success")
         setFormData({ name: "", phone: "", email: "", message: "" })
       } else {
-        setSubmitMessage("❌ Ошибка при отправке. Попробуйте еще раз или свяжитесь с нами напрямую.")
+        setSubmitStatus("error")
       }
     } catch (error) {
-      setSubmitMessage("❌ Ошибка при отправке. Попробуйте еще раз или свяжитесь с нами напрямую.")
+      setSubmitStatus("error")
     } finally {
       setIsSubmitting(false)
+      setTimeout(() => setSubmitStatus("idle"), 5000)
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" })
-    }
-  }
+  const services = [
+    {
+      title: "Разработка сайтов",
+      description:
+        "Создаем современные, быстрые и конверсионные лендинги, корпоративные сайты и интернет-магазины с уникальным дизайном.",
+      features: ["Адаптивный дизайн", "SEO-оптимизация", "Быстрая загрузка", "Уникальный дизайн"],
+    },
+    {
+      title: "SEO-оптимизация",
+      description:
+        "Выводим ваш сайт в топ поисковых систем (Яндекс, Google) для получения органического трафика и увеличения продаж.",
+      features: ["Анализ конкурентов", "Техническая оптимизация", "Контент-оптимизация", "Отчеты и аналитика"],
+    },
+    {
+      title: "Автоматизация",
+      description:
+        "Интегрируем Telegram-боты и CRM-системы для оптимизации бизнес-процессов и увеличения эффективности.",
+      features: ["Telegram-боты", "CRM-системы", "Автоматизация процессов", "Интеграции"],
+    },
+  ]
 
   return (
-    <div className="min-h-screen gradient-mesh overflow-x-hidden">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div
-          className="absolute top-20 left-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-xl animate-pulse-glow transition-transform duration-1000 ease-out"
-          style={{
-            transform: `translateY(${scrollY * 0.1}px) translateX(${mousePosition.x * 20}px) translateY(${mousePosition.y * 15}px)`,
-          }}
-        />
-        <div
-          className="absolute top-40 right-20 w-24 h-24 bg-amber-500/10 rounded-full blur-xl animate-float transition-transform duration-1000 ease-out"
-          style={{
-            transform: `translateY(${scrollY * -0.15}px) translateX(${mousePosition.x * -25}px) translateY(${mousePosition.y * -20}px)`,
-          }}
-        />
-        <div
-          className="absolute bottom-40 left-1/4 w-40 h-40 bg-cyan-600/10 rounded-full blur-xl transition-transform duration-1000 ease-out"
-          style={{
-            transform: `translateY(${scrollY * 0.08}px) translateX(${mousePosition.x * 15}px) translateY(${mousePosition.y * 10}px)`,
-          }}
-        />
-        <div
-          className="absolute top-1/3 left-1/2 w-20 h-20 bg-gradient-to-r from-cyan-400/20 to-amber-400/20 rounded-full blur-lg animate-pulse transition-transform duration-1000 ease-out"
-          style={{
-            transform: `translateX(${mousePosition.x * -30}px) translateY(${mousePosition.y * 25}px)`,
-            animationDelay: "2s",
-          }}
-        />
-      </div>
-
+    <div
+      className={`min-h-screen transition-colors duration-300 ${isDarkMode ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"}`}
+    >
+      {/* Header */}
       <header
-        className={`fixed top-0 w-full z-50 transition-all duration-700 ease-out ${
-          scrollY > 50
-            ? "bg-white/95 backdrop-blur-md shadow-lg py-2 border-b border-cyan-100/50"
-            : "bg-transparent py-4"
-        }`}
+        className={`fixed top-0 w-full z-50 transition-all duration-500 transform ${
+          isLoaded ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        } ${isDarkMode ? "bg-gray-900/95" : "bg-white/95"} backdrop-blur-sm border-b ${isDarkMode ? "border-gray-800" : "border-gray-200"}`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center group cursor-pointer">
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl mr-3 flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 ease-out shadow-lg group-hover:shadow-cyan-500/25">
-                <Sparkles className="w-6 h-6 text-white group-hover:animate-spin transition-all duration-500" />
-              </div>
-              <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                <span className="text-2xl font-serif font-black text-gray-900 group-hover:text-cyan-600 transition-colors duration-300">
-                  Zhaksytech
-                </span>
-                <div className="text-xs text-cyan-600 font-medium opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                  цифровое агентство
-                </div>
-              </div>
-            </div>
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div
+            className={`text-2xl font-bold transition-all duration-500 transform ${
+              isLoaded ? "translate-x-0 opacity-100" : "-translate-x-8 opacity-0"
+            }`}
+          >
+            Zhaksytech
+          </div>
 
-            <nav className="hidden lg:flex space-x-2">
-              {[
-                { name: "Главная", id: "hero" },
-                { name: "Услуги", id: "services" },
-                { name: "Кейсы", id: "cases" },
-                { name: "О нас", id: "about" },
-                { name: "Контакты", id: "contact" },
-              ].map((item, index) => (
-                <Button
-                  key={item.id}
-                  onClick={() => scrollToSection(item.id)}
-                  variant={index === 0 ? "default" : "ghost"}
-                  className={`${
-                    index === 0
-                      ? "bg-gradient-to-r from-cyan-600 to-cyan-700 text-white hover:from-cyan-700 hover:to-cyan-800 shadow-lg hover:shadow-cyan-500/25"
-                      : "text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 hover:shadow-md"
-                  } rounded-full px-6 py-2 text-sm font-medium transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5 relative overflow-hidden group`}
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-amber-400/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 ease-out" />
-                  <span className="relative z-10">{item.name}</span>
-                </Button>
-              ))}
-            </nav>
+          {/* Desktop Navigation */}
+          <nav
+            className={`hidden md:flex items-center space-x-8 transition-all duration-700 transform ${
+              isLoaded ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+            }`}
+          >
+            <button
+              onClick={() => scrollToSection("services")}
+              className="px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-gray-800 hover:scale-105 transition-all duration-300"
+            >
+              Услуги
+            </button>
+            <button
+              onClick={() => scrollToSection("cases")}
+              className="px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-gray-800 hover:scale-105 transition-all duration-300"
+            >
+              Кейсы
+            </button>
+            <button
+              onClick={() => scrollToSection("about")}
+              className="px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-gray-800 hover:scale-105 transition-all duration-300"
+            >
+              О нас
+            </button>
+            <button
+              onClick={() => scrollToSection("contact")}
+              className="px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-gray-800 hover:scale-105 transition-all duration-300"
+            >
+              Контакты
+            </button>
+          </nav>
 
-            <div className="flex items-center space-x-3">
-              <div className="hidden md:flex items-center space-x-2 text-gray-900 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 border border-cyan-100/50 hover:border-cyan-200 transition-all duration-300 hover:shadow-lg group">
-                <Phone className="h-4 w-4 text-cyan-600 group-hover:animate-bounce" />
-                <span className="font-semibold group-hover:text-cyan-600 transition-colors duration-300">
-                  +7 707 380 39 48
-                </span>
+          <div className="flex items-center space-x-4">
+            <a
+              href="tel:+77073803948"
+              className={`hidden md:block text-lg font-semibold hover:text-red-500 hover:scale-105 transition-all duration-300 transform ${
+                isLoaded ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              }`}
+              style={{ transitionDelay: "200ms" }}
+            >
+              +7 707 380 39 48
+            </a>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg hover:scale-110 transition-all duration-300 transform ${
+                isLoaded ? "scale-100 opacity-100" : "scale-0 opacity-0"
+              } ${isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-100 hover:bg-gray-200"}`}
+              style={{ transitionDelay: "300ms" }}
+            >
+              {isDarkMode ? "☀️" : "🌙"}
+            </button>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className={`md:hidden p-2 hover:scale-110 transition-all duration-300 transform ${
+                isLoaded ? "scale-100 opacity-100" : "scale-0 opacity-0"
+              }`}
+              style={{ transitionDelay: "400ms" }}
+            >
+              <div className="w-6 h-6 flex flex-col justify-center items-center">
+                <span
+                  className={`block w-5 h-0.5 ${isDarkMode ? "bg-white" : "bg-gray-900"} transition-all duration-300 ${isMenuOpen ? "rotate-45 translate-y-1" : ""}`}
+                ></span>
+                <span
+                  className={`block w-5 h-0.5 ${isDarkMode ? "bg-white" : "bg-gray-900"} transition-all duration-300 mt-1 ${isMenuOpen ? "opacity-0" : ""}`}
+                ></span>
+                <span
+                  className={`block w-5 h-0.5 ${isDarkMode ? "bg-white" : "bg-gray-900"} transition-all duration-300 mt-1 ${isMenuOpen ? "-rotate-45 -translate-y-1" : ""}`}
+                ></span>
               </div>
-              <a
-                href="https://t.me/zhaksy_tech"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center hover:scale-110 transition-all duration-500 ease-out shadow-lg hover:shadow-green-500/25 hover:rotate-12 group"
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <div
+          className={`md:hidden overflow-hidden transition-all duration-500 ${
+            isMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          } ${isDarkMode ? "bg-gray-900" : "bg-white"} border-t ${isDarkMode ? "border-gray-800" : "border-gray-200"}`}
+        >
+          <div className="container mx-auto px-4 py-4 space-y-4">
+            {["services", "cases", "about", "contact"].map((section, index) => (
+              <button
+                key={section}
+                onClick={() => scrollToSection(section)}
+                className={`block w-full text-left hover:text-red-500 hover:translate-x-2 transition-all duration-300 transform ${
+                  isMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-4 opacity-0"
+                }`}
+                style={{ transitionDelay: `${index * 100}ms` }}
               >
-                <MessageCircle className="h-4 w-4 text-white group-hover:animate-pulse" />
-              </a>
-              <a
-                href="mailto:zhaksytech@gmail.com"
-                className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center hover:scale-110 transition-all duration-500 ease-out shadow-lg hover:shadow-cyan-500/25 hover:-rotate-12 group"
-              >
-                <Mail className="h-4 w-4 text-white group-hover:animate-pulse" />
-              </a>
-            </div>
+                {section === "services"
+                  ? "Услуги"
+                  : section === "cases"
+                    ? "Кейсы"
+                    : section === "about"
+                      ? "О нас"
+                      : "Контакты"}
+              </button>
+            ))}
+            <a
+              href="tel:+77073803948"
+              className={`block w-full text-left text-lg font-semibold hover:text-red-500 hover:translate-x-2 transition-all duration-300 transform ${
+                isMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-4 opacity-0"
+              }`}
+              style={{ transitionDelay: "400ms" }}
+            >
+              +7 707 380 39 48
+            </a>
           </div>
         </div>
       </header>
 
-      <section id="hero" className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
+      {/* Hero Section */}
+      <section className="pt-24 pb-16 px-4 relative overflow-hidden gradient-mesh">
+        {/* Background Text */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className="absolute inset-0 transition-transform duration-1000 ease-out"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, rgb(8 145 178) 1px, transparent 0)`,
-              backgroundSize: "50px 50px",
-              transform: `translate(${scrollY * 0.1 + mousePosition.x * 10}px, ${scrollY * 0.05 + mousePosition.y * 5}px)`,
-            }}
-          />
-        </div>
-
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-          <h1
-            className="text-[8rem] sm:text-[12rem] lg:text-[16rem] xl:text-[20rem] font-serif font-black text-cyan-600/5 select-none leading-none whitespace-nowrap transition-transform duration-1000 ease-out"
-            style={{
-              transform: `translateX(${scrollY * -0.2 + mousePosition.x * -20}px) rotateY(${mousePosition.x * 5}deg)`,
-              textShadow: "0 0 100px rgba(8, 145, 178, 0.1)",
-            }}
+            className={`text-[12rem] md:text-[20rem] font-black opacity-5 select-none transition-all duration-1000 transform ${
+              isLoaded ? "scale-100 opacity-5" : "scale-110 opacity-0"
+            } text-primary/20`}
           >
             Zhaksytech
-          </h1>
+          </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-          <div className="grid lg:grid-cols-12 gap-8 items-center min-h-[80vh]">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-8">
-              <div
-                className={`space-y-6 transform transition-all duration-1500 ease-out ${
-                  isVisible.hero ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+        <div className="container mx-auto relative z-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-left">
+              <h1
+                className={`text-4xl md:text-6xl font-bold mb-6 transition-all duration-800 transform bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent ${
+                  isLoaded ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
                 }`}
-                data-animate
-                id="hero"
               >
-                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-cyan-100 to-amber-100 rounded-full px-4 py-2 text-sm font-medium text-cyan-700 border border-cyan-200/50 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-105 animate-float group">
-                  <Rocket className="w-4 h-4 group-hover:animate-bounce" />
-                  <span>Поднимите свое цифровое присутствие</span>
-                </div>
+                Ваш бизнес в интернете на автопилоте
+              </h1>
+              <p
+                className={`text-lg md:text-xl mb-8 text-muted-foreground transition-all duration-800 transform ${
+                  isLoaded ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+                }`}
+                style={{ transitionDelay: "200ms" }}
+              >
+                Full-Cycle Digital Agency | Опыт с 2020 года
+              </p>
+              <p
+                className={`text-base md:text-lg mb-8 text-muted-foreground transition-all duration-800 transform ${
+                  isLoaded ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+                }`}
+                style={{ transitionDelay: "400ms" }}
+              >
+                Разрабатываем сайты, создаем брендинг и запускаем эффективный performance-маркетинг, который приносит
+                измеримый рост продаж.
+              </p>
 
-                <h2 className="text-4xl lg:text-6xl xl:text-7xl font-serif font-black text-gray-900 leading-tight">
-                  <span
-                    className={`inline-block transform transition-all duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                    style={{ transitionDelay: "200ms" }}
-                  >
-                    Превращаем идеи
-                  </span>
-                  <br />
-                  <span
-                    className={`inline-block bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent transform transition-all duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                    style={{ transitionDelay: "400ms" }}
-                  >
-                    в результат
-                  </span>
-                  <br />
-                  <span
-                    className={`inline-block transform transition-all duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                    style={{ transitionDelay: "600ms" }}
-                  >
-                    Цифровые решения
-                  </span>
-                </h2>
-
-                <p
-                  className={`text-xl text-gray-600 max-w-2xl leading-relaxed font-sans transform transition-all duration-1000 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                  style={{ transitionDelay: "800ms" }}
-                >
-                  С 2011 года мы превращаем идеи в цифровые решения, которые работают. Более 150 успешных проектов и
-                  растущий бизнес наших клиентов.
-                </p>
-
-                {/* Service List */}
-                <div className="space-y-4 text-lg">
-                  {[
-                    "Сайты, Лендинги, Интернет-магазины",
-                    "Яндекс Директ, SEO, SMM, Таргетинг",
-                    "Логотипы, Брендинг, Презентации",
-                    "Telegram-боты и автоматизация",
-                    "Разработка в 1С и интеграции",
-                  ].map((service, index) => (
-                    <div
+              {/* Service List */}
+              <ul className="space-y-3 mb-8">
+                {["Разработка сайтов и интернет-магазинов", "SEO-продвижение", "Автоматизация бизнес-процессов"].map(
+                  (service, index) => (
+                    <li
                       key={index}
-                      className={`flex items-center space-x-4 transform transition-all duration-700 hover:translate-x-2 hover:scale-105 cursor-default group ${
-                        isVisible.hero ? "translate-x-0 opacity-100" : "translate-x-10 opacity-0"
+                      className={`flex items-center transition-all duration-600 transform hover:translate-x-2 ${
+                        isLoaded ? "translate-x-0 opacity-100" : "-translate-x-8 opacity-0"
                       }`}
-                      style={{ transitionDelay: `${1000 + index * 100}ms` }}
+                      style={{ transitionDelay: `${600 + index * 100}ms` }}
                     >
-                      <div className="w-3 h-3 bg-gradient-to-r from-cyan-500 to-amber-500 rounded-full animate-pulse group-hover:animate-bounce group-hover:scale-125 transition-transform duration-300" />
-                      <span className="text-gray-700 hover:text-cyan-600 transition-colors duration-300 font-sans group-hover:font-semibold">
-                        {service}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      <span className="w-2 h-2 bg-primary rounded-full mr-3 animate-pulse"></span>
+                      <span className="hover:text-primary transition-colors duration-300">{service}</span>
+                    </li>
+                  ),
+                )}
+              </ul>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                  <Button
-                    size="lg"
-                    onClick={() => scrollToSection("contact")}
-                    className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-full px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-500 ease-out shadow-lg hover:shadow-cyan-500/25 hover:-translate-y-1 group relative overflow-hidden"
-                  >
-                    <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 ease-out opacity-20" />
-                    <span className="relative z-10 flex items-center">
-                      Получить бесплатную консультацию
-                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 group-hover:animate-pulse transition-all duration-300" />
-                    </span>
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => scrollToSection("cases")}
-                    className="border-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white rounded-full px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-500 ease-out hover:shadow-amber-500/25 hover:-translate-y-1 group relative overflow-hidden"
-                  >
-                    <span className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 ease-out" />
-                    <span className="relative z-10">Посмотреть наши работы</span>
-                  </Button>
-                </div>
+              <div
+                className={`flex flex-col sm:flex-row gap-4 transition-all duration-800 transform ${
+                  isLoaded ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+                }`}
+                style={{ transitionDelay: "900ms" }}
+              >
+                <button
+                  onClick={() => scrollToSection("contact")}
+                  className="px-8 py-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Получить предложение
+                </button>
+
+                <button
+                  onClick={() => scrollToSection("cases")}
+                  className="px-8 py-4 bg-transparent border-2 border-red-600 text-red-600 dark:text-red-400 rounded-lg font-semibold hover:bg-red-600 hover:text-white hover:scale-105 transition-all duration-300"
+                >
+                  Смотреть наши кейсы
+                </button>
               </div>
             </div>
 
-            {/* Right Content */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative flex justify-center">
+            <div
+              className={`relative transition-all duration-1000 transform ${
+                isLoaded ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              }`}
+              style={{ transitionDelay: "600ms" }}
+            >
+              {/* Enhanced geometric shapes with emerald theme */}
+              <div className="relative">
                 <div
-                  className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-3xl animate-pulse shadow-lg transition-transform duration-1000 ease-out hover:scale-110"
-                  style={{
-                    transform: `rotate(${12 + scrollY * 0.1 + mousePosition.x * 10}deg) translateX(${mousePosition.x * 5}px) translateY(${mousePosition.y * 5}px)`,
-                    boxShadow: "0 20px 40px rgba(8, 145, 178, 0.3)",
-                  }}
-                />
+                  className={`absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-full opacity-20 transition-all duration-1000 transform animate-float ${
+                    isLoaded ? "scale-100 rotate-0" : "scale-0 rotate-45"
+                  }`}
+                  style={{ transitionDelay: "800ms" }}
+                ></div>
                 <div
-                  className="absolute -bottom-10 -left-10 w-24 h-24 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full animate-bounce shadow-lg transition-transform duration-1000 ease-out hover:scale-110"
-                  style={{
-                    animationDelay: "1s",
-                    transform: `translateX(${mousePosition.x * -8}px) translateY(${mousePosition.y * -8}px)`,
-                    boxShadow: "0 15px 30px rgba(245, 158, 11, 0.3)",
-                  }}
+                  className={`absolute -bottom-10 -left-10 w-24 h-24 bg-gradient-to-tr from-accent to-primary opacity-30 transition-all duration-1000 transform animate-pulse-glow ${
+                    isLoaded ? "scale-100 rotate-45" : "scale-0 rotate-90"
+                  }`}
+                  style={{ transitionDelay: "1000ms" }}
+                ></div>
+                <img
+                  src="/classical-statue-digital-marketing.png"
+                  alt="Digital Marketing"
+                  className={`relative z-10 mx-auto transition-all duration-1000 transform hover:scale-105 ${
+                    isLoaded ? "scale-100 opacity-100" : "scale-95 opacity-0"
+                  }`}
+                  style={{ transitionDelay: "700ms" }}
                 />
-                <div
-                  className="absolute top-1/2 -right-20 w-16 h-16 bg-gradient-to-r from-cyan-600 to-amber-500 rounded-2xl shadow-lg transition-transform duration-1000 ease-out hover:scale-110"
-                  style={{
-                    transform: `rotate(${-45 + scrollY * -0.1 + mousePosition.y * 15}deg) translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`,
-                    boxShadow: "0 10px 20px rgba(8, 145, 178, 0.2)",
-                  }}
-                />
-
-                <div className="relative z-10 w-80 h-80 rounded-3xl overflow-hidden bg-gradient-to-br from-cyan-100 to-amber-100 shadow-2xl transform hover:scale-105 transition-all duration-700 ease-out hover:rotate-1 group perspective-1000">
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-600/20 to-amber-600/20 group-hover:from-cyan-600/30 group-hover:to-amber-600/30 transition-all duration-500" />
-                  <img
-                    src="/digital-marketer-statue.png"
-                    alt="Цифровые инновации"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/50 to-transparent group-hover:from-cyan-900/60 transition-all duration-500" />
-                  <div className="absolute bottom-6 left-6 right-6 transform group-hover:translate-y-0 translate-y-2 transition-transform duration-500">
-                    <div className="text-white font-bold text-lg font-serif group-hover:text-cyan-200 transition-colors duration-300">
-                      13+ лет опыта
-                    </div>
-                    <div className="text-cyan-200 text-sm font-sans group-hover:text-amber-200 transition-colors duration-300">
-                      в цифровом маркетинге
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div
-                      className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400 rounded-full animate-ping"
-                      style={{ animationDelay: "0s" }}
-                    />
-                    <div
-                      className="absolute top-1/3 right-1/3 w-1 h-1 bg-amber-400 rounded-full animate-ping"
-                      style={{ animationDelay: "0.5s" }}
-                    />
-                    <div
-                      className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-cyan-300 rounded-full animate-ping"
-                      style={{ animationDelay: "1s" }}
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -390,455 +360,424 @@ export default function ZhaksytechLanding() {
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-20 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            className={`text-center space-y-4 mb-16 transform transition-all duration-1000 ${
-              isVisible.services ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+      <section id="services" className="py-16 px-4 bg-card">
+        <div className="container mx-auto">
+          <h2
+            className={`text-3xl md:text-4xl font-bold text-center mb-4 transition-all duration-800 transform text-card-foreground ${
+              visibleSections.has("services") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
             }`}
-            data-animate
-            id="services"
           >
-            <h2 className="text-4xl lg:text-5xl font-serif font-black text-gray-900">
-              Наши{" "}
-              <span className="bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent">услуги</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
-              Полный спектр цифровых решений для роста вашего бизнеса
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Разработка сайтов",
-                description: "Современные, быстрые и конверсионные решения с уникальным дизайном",
-                icon: "💻",
-                gradient: "from-cyan-500 to-cyan-600",
-                delay: "0ms",
-              },
-              {
-                title: "Брендинг",
-                description: "Фирменный стиль и логотипы, которые выделяют среди конкурентов",
-                icon: "🎨",
-                gradient: "from-amber-500 to-amber-600",
-                delay: "200ms", // increased delay from 100ms to 200ms
-              },
-              {
-                title: "SEO-оптимизация",
-                description: "Выводим в топ поисковых систем для органического трафика",
-                icon: "📈",
-                gradient: "from-green-500 to-emerald-500",
-                delay: "400ms", // increased delay from 200ms to 400ms
-              },
-              {
-                title: "Контекстная реклама",
-                description: "Эффективные кампании в Яндекс.Директ и Google Ads",
-                icon: "🎯",
-                gradient: "from-orange-500 to-red-500",
-                delay: "600ms", // increased delay from 300ms to 600ms
-              },
-              {
-                title: "SMM и Таргет",
-                description: "Управление соцсетями и таргетированная реклама",
-                icon: "📱",
-                gradient: "from-cyan-500 to-blue-500",
-                delay: "800ms", // increased delay from 400ms to 800ms
-              },
-              {
-                title: "Автоматизация",
-                description: "Telegram-боты и CRM-системы для оптимизации процессов",
-                icon: "🤖",
-                gradient: "from-cyan-600 to-amber-500",
-                delay: "1000ms", // increased delay from 500ms to 1000ms
-              },
-            ].map((service, index) => (
-              <Card
+            Наши услуги
+          </h2>
+          <p
+            className={`text-center text-muted-foreground mb-12 max-w-3xl mx-auto transition-all duration-800 transform ${
+              visibleSections.has("services") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+            style={{ transitionDelay: "200ms" }}
+          >
+            Мы предлагаем полный спектр услуг для создания и продвижения вашего бизнеса в цифровом пространстве.
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {services.map((service, index) => (
+              <div
                 key={index}
-                className={`group hover:shadow-2xl transition-all duration-700 border-0 bg-white/80 backdrop-blur-sm transform hover:scale-105 hover:-translate-y-2 ${
-                  isVisible.services ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+                className={`bg-background rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:transform hover:scale-105 hover:-translate-y-2 transform border border-border hover:border-primary/50 ${
+                  visibleSections.has("services") ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0"
                 }`}
-                style={{ transitionDelay: service.delay }}
+                style={{ transitionDelay: `${400 + index * 200}ms` }}
               >
-                <CardContent className="p-8 space-y-6 relative overflow-hidden">
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}
-                  />
-                  <div className="text-5xl transform group-hover:scale-110 transition-transform duration-300">
-                    {service.icon}
+                <h3 className="text-xl font-bold mb-3 text-primary hover:text-accent transition-colors duration-300">
+                  {service.title}
+                </h3>
+                <p className="text-muted-foreground mb-4">{service.description}</p>
+
+                <div className="space-y-2 mb-4">
+                  {service.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center group">
+                      <span className="w-2 h-2 bg-primary rounded-full mr-3 group-hover:scale-125 transition-transform duration-300"></span>
+                      <span className="text-sm group-hover:translate-x-1 transition-transform duration-300 group-hover:text-primary">
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setExpandedService(expandedService === index ? null : index)}
+                  className="text-primary hover:text-accent font-semibold hover:translate-x-1 transition-all duration-300"
+                >
+                  {expandedService === index ? "Скрыть детали" : "Подробнее"}
+                </button>
+
+                <div
+                  className={`overflow-hidden transition-all duration-500 ${
+                    expandedService === index ? "max-h-32 opacity-100 mt-4" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-sm text-muted-foreground">
+                      Свяжитесь с нами для получения подробной консультации и расчета стоимости проекта под ваши задачи.
+                    </p>
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-gray-900 group-hover:text-cyan-600 transition-colors duration-300">
-                    {service.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors font-sans">
-                    {service.description}
-                  </p>
-                  <div
-                    className={`w-12 h-1 bg-gradient-to-r ${service.gradient} rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left`}
-                  />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section id="about" className="py-16 px-4">
+        <div className="container mx-auto">
+          <h2
+            className={`text-3xl md:text-4xl font-bold text-center mb-4 transition-all duration-800 transform text-card-foreground ${
+              visibleSections.has("about") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+          >
+            Почему выбирают нас
+          </h2>
+          <p
+            className={`text-center text-muted-foreground mb-12 max-w-3xl mx-auto transition-all duration-800 transform ${
+              visibleSections.has("about") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+            style={{ transitionDelay: "200ms" }}
+          >
+            С 2020 года мы помогаем бизнесу расти, используя проверенные и инновационные методы цифрового маркетинга.
+          </p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            {[
+              { number: "4+", label: "года опыта" },
+              { number: "50+", label: "успешных проектов" },
+              { number: "8+", label: "штатных специалистов" },
+              { number: "40+", label: "клиентов остаются с нами" },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className={`p-6 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700 ${
+                  visibleSections.has("about") ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                }`}
+                style={{ transitionDelay: `${400 + index * 100}ms` }}
+              >
+                <div className="text-4xl font-bold text-emerald-600 mb-2">{stat.number}</div>
+                <div className="text-gray-700 dark:text-gray-300 font-medium">{stat.label}</div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Cases Section */}
-      <section id="cases" className="py-20 bg-gradient-to-br from-gray-50 to-cyan-50 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(45deg, transparent 40%, rgba(8, 145, 178, 0.1) 50%, transparent 60%)`,
-              backgroundSize: "100px 100px",
-            }}
-          />
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div
-            className={`text-center space-y-4 mb-16 transform transition-all duration-1000 ${
-              isVisible.cases ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+      <section id="cases" className={`py-16 px-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-50"}`}>
+        <div className="container mx-auto">
+          <h2
+            className={`text-3xl md:text-4xl font-bold text-center mb-4 transition-all duration-800 transform ${
+              visibleSections.has("cases") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
             }`}
-            data-animate
-            id="cases"
           >
-            <h2 className="text-4xl lg:text-5xl font-serif font-black text-gray-900">
-              Истории{" "}
-              <span className="bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent">
-                успеха клиентов
-              </span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
-              Реальные истории успеха с измеримыми результатами
-            </p>
-          </div>
-
+            Наши кейсы
+          </h2>
+          <p
+            className={`text-center text-muted-foreground mb-12 max-w-3xl mx-auto transition-all duration-800 transform ${
+              visibleSections.has("cases") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+            style={{ transitionDelay: "200ms" }}
+          >
+            Реальные истории успеха наших клиентов, основанные на данных и детальной аналитике результатов.
+          </p>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
+                category: "E-commerce",
                 title: "Digital Mart",
-                category: "Интернет-магазин",
+                desc: "Разработка современного интернет-магазина с интеграцией платежных систем и системой управления заказами.",
                 result: "Увеличили конверсию на 38%",
-                image: "/ecommerce-dashboard-growth.png",
-                gradient: "from-green-500 to-emerald-500",
-                delay: "0ms",
               },
               {
+                category: "Automation",
                 title: "HR-бот для найма",
-                category: "Автоматизация",
+                desc: "Создание Telegram-бота для автоматизации процесса подбора персонала и первичного скрининга кандидатов.",
                 result: "Сократили время подбора на 35%",
-                image: "/hr-chatbot-interface.png",
-                gradient: "from-cyan-500 to-cyan-600",
-                delay: "200ms",
               },
               {
-                title: "AI-ассистент",
                 category: "FinTech",
+                title: "AI-ассистент",
+                desc: "Разработка AI-ассистента для финансовой отчетности с использованием машинного обучения и аналитики данных.",
                 result: "Ускорили отчетность на 44%",
-                image: "/ai-financial-dashboard.png",
-                gradient: "from-amber-500 to-amber-600",
-                delay: "400ms",
               },
-            ].map((caseStudy, index) => (
-              <Card
-                key={index}
-                className={`group hover:shadow-2xl transition-all duration-700 overflow-hidden border-0 bg-white/90 backdrop-blur-sm transform hover:scale-105 hover:-translate-y-4 ${
-                  isVisible.cases ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-                }`}
-                style={{ transitionDelay: caseStudy.delay }}
-              >
-                <div className="aspect-video overflow-hidden relative">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${caseStudy.gradient} opacity-20 z-10`} />
-                  <img
-                    src={caseStudy.image || "/placeholder.svg"}
-                    alt={caseStudy.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                </div>
-                <CardContent className="p-6 space-y-4">
-                  <Badge className={`bg-gradient-to-r ${caseStudy.gradient} text-white border-0`}>
-                    {caseStudy.category}
-                  </Badge>
-                  <h3 className="text-xl font-serif font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">
-                    {caseStudy.title}
-                  </h3>
-                  <p className="text-lg font-semibold text-green-600 font-sans">{caseStudy.result}</p>
-                  <div className="flex items-center text-cyan-600 font-medium group-hover:translate-x-2 transition-transform duration-300 font-sans">
-                    <span>Подробнее</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-20 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            className={`text-center space-y-4 mb-16 transform transition-all duration-1000 ${
-              isVisible.about ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-            }`}
-            data-animate
-            id="about"
-          >
-            <h2 className="text-4xl lg:text-5xl font-serif font-black text-gray-900">
-              Почему выбирают{" "}
-              <span className="bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent">
-                Zhaksytech
-              </span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
-              Более 13 лет в индустрии, Zhaksytech сочетает экспертизу и инновации для создания решений, которые
-              приносят результат.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            {[
-              { number: "13+", label: "Лет опыта", icon: Award },
-              { number: "150+", label: "Успешных проектов", icon: CheckCircle },
-              { number: "30+", label: "Специалистов в команде", icon: Users },
-              { number: "95%", label: "Клиентов остаются с нами", icon: Star },
-            ].map((stat, index) => (
+            ].map((caseItem, index) => (
               <div
                 key={index}
-                className={`text-center group transform transition-all duration-700 ${
-                  isVisible.about ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+                className={`${isDarkMode ? "bg-gray-900" : "bg-white"} rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:transform hover:scale-105 hover:-translate-y-2 transform ${
+                  visibleSections.has("cases") ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0"
                 }`}
-                style={{ transitionDelay: `${index * 100}ms` }}
+                style={{ transitionDelay: `${400 + index * 200}ms` }}
               >
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-100 to-amber-100 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <stat.icon className="w-8 h-8 text-cyan-600" />
+                <div className="text-sm text-primary font-semibold mb-2 hover:text-accent transition-colors duration-300">
+                  {caseItem.category}
                 </div>
-                <div className="text-4xl lg:text-5xl font-serif font-black bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent mb-2">
-                  {stat.number}
+                <h3 className="text-xl font-bold mb-3 hover:text-primary transition-colors duration-300">
+                  {caseItem.title}
+                </h3>
+                <p className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-4`}>{caseItem.desc}</p>
+                <div className="text-primary font-semibold hover:text-accent transition-colors duration-300">
+                  {caseItem.result}
                 </div>
-                <div className="text-gray-600 font-medium font-sans">{stat.label}</div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-cyan-600 via-cyan-700 to-amber-500 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="space-y-8">
-            <h2 className="text-4xl lg:text-5xl font-serif font-black text-white">Готовы обсудить ваш проект?</h2>
-            <p className="text-xl text-cyan-100 leading-relaxed max-w-2xl mx-auto font-sans">
-              Получите персональную консультацию и узнайте, как мы можем помочь вашему бизнесу расти
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                onClick={() => scrollToSection("contact")}
-                className="bg-white text-cyan-600 hover:bg-gray-100 rounded-full px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                Заполнить бриф
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => window.open("https://t.me/zhaksy_tech", "_blank")}
-                className="border-2 border-white text-white hover:bg-white hover:text-cyan-600 bg-transparent rounded-full px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-300"
-              >
-                Написать в Telegram
-              </Button>
-            </div>
           </div>
         </div>
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gradient-to-br from-gray-50 to-cyan-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12">
+      <section id="contact" className="py-16 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <h2
+            className={`text-3xl md:text-4xl font-bold text-center mb-4 transition-all duration-800 transform ${
+              visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+          >
+            Готовы обсудить ваш проект?
+          </h2>
+          <p
+            className={`text-center text-muted-foreground mb-12 max-w-3xl mx-auto transition-all duration-800 transform ${
+              visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+            style={{ transitionDelay: "200ms" }}
+          >
+            Оставьте заявку, и мы свяжемся с вами в течение одного рабочего дня, чтобы обсудить цели и предложить
+            эффективные решения для вашего бизнеса.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-12">
             <div
-              className={`space-y-8 transform transition-all duration-1000 ${
-                isVisible.contact ? "translate-x-0 opacity-100" : "translate-x-10 opacity-0"
+              className={`transition-all duration-800 transform ${
+                visibleSections.has("contact") ? "translate-x-0 opacity-100" : "-translate-x-8 opacity-0"
               }`}
-              data-animate
-              id="contact"
+              style={{ transitionDelay: "400ms" }}
             >
+              <h3 className="text-2xl font-bold mb-6">Свяжитесь с нами</h3>
+              <p className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-8`}>
+                Заполните форму или используйте удобный для вас способ связи для обсуждения вашего проекта.
+              </p>
               <div className="space-y-4">
-                <h2 className="text-4xl font-serif font-black text-gray-900">
-                  Начнем{" "}
-                  <span className="bg-gradient-to-r from-cyan-600 to-amber-500 bg-clip-text text-transparent">
-                    ваш проект
-                  </span>
-                </h2>
-                <p className="text-xl text-gray-600 font-sans">Обсудим ваш проект и предложим эффективные решения</p>
-              </div>
-              <div className="space-y-6">
                 {[
-                  { icon: Phone, text: "+7 707 380 39 48", gradient: "from-green-500 to-emerald-500" },
-                  { icon: MessageCircle, text: "@zhaksy_tech", gradient: "from-cyan-500 to-cyan-600" },
-                  { icon: Mail, text: "zhaksytech@gmail.com", gradient: "from-amber-500 to-amber-600" },
+                  { href: "tel:+77073803948", text: "+7 707 380 39 48", type: "phone" },
+                  { href: "https://wa.me/77073803948", text: "WhatsApp", type: "whatsapp" },
+                  { href: "https://t.me/zhaksy_tech", text: "@zhaksy_tech", type: "telegram" },
+                  { href: "mailto:zhaksytech@gmail.com", text: "zhaksytech@gmail.com", type: "email" },
                 ].map((contact, index) => (
-                  <div key={index} className="flex items-center space-x-4 group">
-                    <div
-                      className={`w-12 h-12 bg-gradient-to-r ${contact.gradient} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <contact.icon className="h-6 w-6 text-white" />
+                  <div
+                    key={index}
+                    className={`flex items-center group transition-all duration-500 transform ${
+                      visibleSections.has("contact") ? "translate-x-0 opacity-100" : "-translate-x-4 opacity-0"
+                    }`}
+                    style={{ transitionDelay: `${600 + index * 100}ms` }}
+                  >
+                    <div className="w-8 h-8 mr-4 flex items-center justify-center bg-primary rounded-full group-hover:scale-125 transition-transform duration-300">
+                      {contact.type === "phone" && (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                        </svg>
+                      )}
+                      {contact.type === "whatsapp" && (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20.1 4H3.9C3.4 4 3 4.4 3 4.9v14.2c0 .5.4 1 1 1h16.2c.5 0 1-.5 1-1V4.9c0-.5-.4-1-1-1zm0 10.2h8.2v6h-8.2v-6zm-1.5 2.1c2.3 0 4.2-1.9 4.2-4.2s-1.9-4.2-4.2-4.2-4.2 1.9-4.2 4.2 1.9 4.2 4.2 4.2zm3.1-9.3l-4.4 3.2c-.1.1-.2.2-.4.2-.3 0-.5-.1-.7-.2l-1.3-1.2c-.2-.2-.3-.5-.3-.7s.1-.5.3-.7l1.3-1.2c.2-.2.4-.3.7-.3.3 0 .5.1.7.2l4.4 3.2c.3.2.3.7 0 1-.4.3-1 .4-1.4 0l-3.2-4.4c-.2-.2-.5-.2-.7 0-.2.2-.2.6 0 .8l3.2 4.4z" />
+                        </svg>
+                      )}
+                      {contact.type === "telegram" && (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
+                        </svg>
+                      )}
+                      {contact.type === "email" && (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                        </svg>
+                      )}
                     </div>
-                    <span className="text-lg text-gray-900 font-medium group-hover:text-cyan-600 transition-colors font-sans">
+                    <a
+                      href={contact.href}
+                      target={contact.type === "whatsapp" || contact.type === "telegram" ? "_blank" : undefined}
+                      rel={
+                        contact.type === "whatsapp" || contact.type === "telegram" ? "noopener noreferrer" : undefined
+                      }
+                      className="hover:text-primary group-hover:translate-x-2 transition-all duration-300"
+                    >
                       {contact.text}
-                    </span>
+                    </a>
                   </div>
                 ))}
               </div>
             </div>
 
-            <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-2xl">
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 font-sans">Имя</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="Ваше имя"
-                      required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300 font-sans"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 font-sans">Телефон</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+7 (___) ___-__-__"
-                      required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300 font-sans"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 font-sans">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="your@email.com"
-                      required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300 font-sans"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 font-sans">Сообщение</label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      placeholder="Расскажите о вашем проекте..."
-                      rows={4}
-                      required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300 resize-none font-sans"
-                    />
-                  </div>
+            <form
+              onSubmit={handleSubmit}
+              className={`space-y-6 transition-all duration-800 transform ${
+                visibleSections.has("contact") ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              }`}
+              style={{ transitionDelay: "600ms" }}
+            >
+              {[
+                { type: "text", placeholder: "Введите ваше имя *", value: formData.name, key: "name" },
+                { type: "tel", placeholder: "Введите номер телефона *", value: formData.phone, key: "phone" },
+                { type: "email", placeholder: "Введите ваш email *", value: formData.email, key: "email" },
+              ].map((field, index) => (
+                <div key={field.key}>
+                  <input
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    value={field.value}
+                    onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                    required
+                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-300 focus:scale-105 focus:shadow-lg ${isDarkMode ? "bg-gray-800 border-gray-700 text-white focus:border-primary placeholder-gray-400" : "bg-white border-gray-300 focus:border-primary placeholder-gray-500"} focus:outline-none`}
+                  />
+                </div>
+              ))}
+              <div>
+                <textarea
+                  placeholder="Расскажите подробнее о вашем проекте, целях и задачах *"
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  required
+                  className={`w-full px-4 py-3 rounded-lg border transition-all duration-300 focus:scale-105 focus:shadow-lg ${isDarkMode ? "bg-gray-800 border-gray-700 text-white focus:border-primary placeholder-gray-400" : "bg-white border-gray-300 focus:border-primary placeholder-gray-500"} focus:outline-none resize-none`}
+                ></textarea>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full px-8 py-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 hover:scale-105 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {isSubmitting ? "Отправляем..." : "Отправить заявку"}
+              </button>
 
-                  {submitMessage && (
-                    <div
-                      className={`p-4 rounded-xl text-sm font-medium font-sans ${
-                        submitMessage.includes("✅")
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : "bg-red-50 text-red-700 border border-red-200"
-                      }`}
-                    >
-                      {submitMessage}
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-amber-500 hover:from-cyan-700 hover:to-amber-600 text-white rounded-xl py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    {isSubmitting ? "Отправляем..." : "Отправить сообщение"}
-                  </Button>
-                  <p className="text-sm text-gray-500 text-center font-sans">
-                    Нажимая «Отправить», вы соглашаетесь с обработкой персональных данных
+              <div
+                className={`transition-all duration-500 ${
+                  submitStatus === "success"
+                    ? "opacity-100 translate-y-0"
+                    : submitStatus === "error"
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-4"
+                }`}
+              >
+                {submitStatus === "success" && (
+                  <p className="text-green-500 text-center">
+                    Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.
                   </p>
-                </form>
-              </CardContent>
-            </Card>
+                )}
+                {submitStatus === "error" && (
+                  <p className="text-red-500 text-center">
+                    Произошла ошибка при отправке заявки. Пожалуйста, попробуйте еще раз.
+                  </p>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                Нажимая «Отправить», вы соглашаетесь с обработкой персональных данных.
+              </p>
+            </form>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-gray-900 to-black text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-serif font-black">Zhaksytech</span>
+      <footer
+        className={`py-8 px-4 transition-all duration-800 transform ${
+          visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+        } ${isDarkMode ? "bg-gray-900 border-t border-gray-800" : "bg-gray-50 border-t border-gray-200"}`}
+        style={{ transitionDelay: "800ms" }}
+      >
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div
+              className={`transition-all duration-600 transform ${
+                visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+              }`}
+              style={{ transitionDelay: "1000ms" }}
+            >
+              <div className="text-2xl font-bold mb-4 hover:text-primary transition-colors duration-300">
+                Zhaksytech
               </div>
-              <p className="text-gray-400 leading-relaxed font-sans">
-                Цифровое агентство полного цикла. Создаем эффективные решения с 2011 года.
+              <p className={`${isDarkMode ? "text-gray-400" : "text-gray-600"} mb-4`}>
+                Цифровое агентство полного цикла для роста вашего бизнеса. Создаем эффективные решения с 2020 года.
               </p>
             </div>
-            <div className="space-y-4">
-              <h4 className="text-lg font-serif font-bold">Навигация</h4>
+            <div
+              className={`transition-all duration-600 transform ${
+                visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+              }`}
+              style={{ transitionDelay: "1100ms" }}
+            >
+              <h4 className="font-semibold mb-4">Навигация</h4>
               <div className="space-y-2">
                 {[
-                  { name: "Услуги", id: "services" },
-                  { name: "Кейсы", id: "cases" },
-                  { name: "О нас", id: "about" },
-                  { name: "Контакты", id: "contact" },
-                ].map((item) => (
+                  { section: "services", label: "Услуги" },
+                  { section: "cases", label: "Кейсы" },
+                  { section: "about", label: "О нас" },
+                  { section: "contact", label: "Контакты" },
+                ].map((item, index) => (
                   <button
-                    key={item.id}
-                    onClick={() => scrollToSection(item.id)}
-                    className="block text-gray-400 hover:text-white transition-colors hover:translate-x-1 transform duration-300 font-sans text-left"
+                    key={item.section}
+                    onClick={() => scrollToSection(item.section)}
+                    className="block hover:text-primary hover:translate-x-1 transition-all duration-300"
                   >
-                    {item.name}
+                    {item.label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="space-y-4">
-              <h4 className="text-lg font-serif font-bold">Контакты</h4>
-              <div className="space-y-2 text-gray-400 font-sans">
-                <p className="hover:text-white transition-colors">+7 707 380 39 48</p>
-                <p className="hover:text-white transition-colors">@zhaksy_tech</p>
-                <p className="hover:text-white transition-colors">zhaksytech@gmail.com</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-lg font-serif font-bold">Социальные сети</h4>
-              <div className="flex space-x-4">
+            <div
+              className={`transition-all duration-600 transform ${
+                visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+              }`}
+              style={{ transitionDelay: "1200ms" }}
+            >
+              <h4 className="font-semibold mb-4">Контакты</h4>
+              <div className="space-y-2">
+                <a
+                  href="tel:+77073803948"
+                  className="block hover:text-primary hover:translate-x-1 transition-all duration-300"
+                >
+                  +7 707 380 39 48
+                </a>
+                <a
+                  href="https://wa.me/77073803948"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block hover:text-primary hover:translate-x-1 transition-all duration-300"
+                >
+                  WhatsApp
+                </a>
                 <a
                   href="https://t.me/zhaksy_tech"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300"
+                  className="block hover:text-primary hover:translate-x-1 transition-all duration-300"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  @zhaksy_tech
                 </a>
                 <a
                   href="mailto:zhaksytech@gmail.com"
-                  className="w-10 h-10 bg-gradient-to-r from-amber-600 to-amber-700 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300"
+                  className="block hover:text-primary hover:translate-x-1 transition-all duration-300"
                 >
-                  <Mail className="w-4 h-4" />
+                  zhaksytech@gmail.com
                 </a>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p className="font-sans">© 2025 Zhaksytech. Все права защищены.</p>
+          <div
+            className={`border-t border-gray-200 dark:border-gray-800 mt-8 pt-8 text-center transition-all duration-800 transform ${
+              visibleSections.has("contact") ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            }`}
+            style={{ transitionDelay: "1300ms" }}
+          >
+            <p
+              className={`${isDarkMode ? "text-gray-500" : "text-gray-500"} text-sm hover:text-primary transition-colors duration-300`}
+            >
+              © 2025 Zhaksytech. Все права защищены.
+            </p>
           </div>
         </div>
       </footer>
